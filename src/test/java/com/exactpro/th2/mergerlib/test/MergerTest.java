@@ -9,7 +9,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import io.grpc.inprocess.InProcessServerBuilder;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,8 +38,7 @@ public class MergerTest {
 	
 	private static final Logger logger = LoggerFactory.getLogger(MergerTest.class);
 	
-	private final int port = 8087;
-	
+
 	private List<MessageSearchRequest> createRequests(int num) {
 		
 		List<MessageSearchRequest> requests = new ArrayList<>();
@@ -71,27 +74,25 @@ public class MergerTest {
 	}
 	
 	@Test
-	public void testFakeServer3Streams() throws IOException, InterruptedException {
+	public void testFakeServer3Streams() throws Exception {
 		
 		logger.info("Test 3 streams");
+
+		String srvName = InProcessServerBuilder.generateName();
+		ExecutorService executorService = Executors.newFixedThreadPool(5);
 		
-		InMemoryGrpcServer srv = new InMemoryGrpcServer(port);
+		InMemoryGrpcServer srv = new InMemoryGrpcServer(srvName, executorService);
 		srv.start();
-		
-		String target = "localhost:" + port;
-		
-		ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
-	        .usePlaintext()
-	        .build();
-		
-		Th2DataProviderMessagesMerger merger = new Th2DataProviderMessagesMerger(channel);
+
+		Th2DataProviderMessagesMerger merger = new Th2DataProviderMessagesMerger(new TestCommonFactory(srvName, executorService));
 		
 		Iterator<StreamResponse> it = merger.searchMessages(createRequests(3),
 				new TimestampComparator().reversed());
 		
 		Timestamp defaultTs = Timestamp.newBuilder().setSeconds(0).build();
 		Instant lastTimestamp = MergerUtil.instantFromTimestamp(defaultTs);
-		
+
+		int count = 0;
 		while (it.hasNext()) {
             StreamResponse r = it.next();
             
@@ -101,9 +102,12 @@ public class MergerTest {
             	assertTrue(lastTimestamp.compareTo(currentTimestamp) < 0);
             }
             lastTimestamp = currentTimestamp;
+			count++;
             
             logger.info("Response: {}", r);
    	 }
+
+		Assertions.assertEquals(15, count);
    	
    	 logger.info("Stream read finished");
 		

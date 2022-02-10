@@ -14,27 +14,27 @@
  * limitations under the License.
  ******************************************************************************/
 
-package com.exactpro.th2.dataprovidermerger.util;
+package com.exactpro.th2.dataprovidermerger.grpc;
 
-import java.time.Instant;
-import java.util.Comparator;
+public class MergerServiceException extends RuntimeException {
 
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
-import com.google.protobuf.Timestamp;
+    public MergerServiceException() {
+        super();
+    }
 
-public class TimestampComparator implements Comparator<StreamResponse> {
-	
-	private final Timestamp defaultTimestamp = 
-			Timestamp.newBuilder().setSeconds(0).build();
-	
-	@Override
-	public int compare(StreamResponse first, StreamResponse second) {
-		
-		Instant firstTs = MergerUtil.extractTimestampFromMessage(first, defaultTimestamp);
-		Instant secondTs = MergerUtil.extractTimestampFromMessage(second, defaultTimestamp);
-		
-		return firstTs.compareTo(secondTs);
-		
-	}	
-	
+    public MergerServiceException(String message) {
+        super(message);
+    }
+
+    public MergerServiceException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public MergerServiceException(Throwable cause) {
+        super(cause);
+    }
+
+    protected MergerServiceException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
+    }
 }

@@ -2,10 +2,12 @@ package com.exactpro.th2.mergerlib.test.testsuit;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import io.grpc.inprocess.InProcessServerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,21 +25,26 @@ import io.grpc.stub.StreamObserver;
 public class InMemoryGrpcServer {
 	
 	private static final Logger logger = LoggerFactory.getLogger(InMemoryGrpcServer.class);
-	
-	private int port;
+
 	private io.grpc.Server server;
-	
-	private ScheduledExecutorService executorService =
+
+	private final String name;
+	private final ExecutorService executorService;
+
+	private ScheduledExecutorService scheduler =
 			Executors.newSingleThreadScheduledExecutor();
 	
-	public InMemoryGrpcServer(int port) {
-		this.port = port;
+	public InMemoryGrpcServer(String name, ExecutorService executorService) {
+		this.name = name;
+		this.executorService = executorService;
 	}
 	
 	public void start() throws IOException, InterruptedException {
-        server = ServerBuilder.forPort(port)
-          .addService(new DataProvider())
-          .build();
+		server = InProcessServerBuilder
+				.forName(name)
+				.executor(executorService)
+				.addService(new DataProvider())
+				.build();
         
         server.start();
         
@@ -60,7 +67,16 @@ public class InMemoryGrpcServer {
 	}
 	
 	private class DataProvider extends DataProviderImplBase {
-		
+
+		Instant instant = Instant.now();
+
+		private synchronized Instant getTime() {
+			long l = System.currentTimeMillis();
+			Instant old = instant;
+			instant = instant.plusSeconds(60);
+			return old;
+		}
+
 		@Override
 		public void searchMessages(MessageSearchRequest request,
 		        StreamObserver<StreamResponse> responseObserver) {
@@ -70,38 +86,32 @@ public class InMemoryGrpcServer {
 			int numMsgs = 5;
 			
 			for (int i = 1; i <= numMsgs; i++) {
-				
-				executorService.schedule(() -> {
-					MessageMetadata metadata = MessageMetadata.newBuilder()
-							.setTimestamp(generateTimestamp())
+
+				Instant time = getTime();
+				MessageMetadata metadata = MessageMetadata.newBuilder()
+							.setTimestamp(Timestamp.newBuilder().setSeconds(time.getEpochSecond()).setNanos(time.getNano()))
 							.build();
-					
+
 					Message msg = Message.newBuilder()
 							.setMetadata(metadata)
 							.build();
-					
+
 					MessageData md = MessageData.newBuilder()
 							.setMessage(msg)
 							.build();
-					
+
 					StreamResponse resp = StreamResponse.newBuilder()
 						.setMessage(md)
 			          .build();
-					
+
 			        responseObserver.onNext(resp);
-				},
-					1*i, 
-					TimeUnit.SECONDS);
-				
-				
+
+					logger.debug("Send message with time: " + getTime());
+
 		    }
-			
-			executorService.schedule(() -> {
-				responseObserver.onCompleted();
-				logger.info("Search messages response completed");
-			},
-				numMsgs + 1, 
-				TimeUnit.SECONDS);
+
+			responseObserver.onCompleted();
+			logger.info("Search messages response completed");
 			
 		}
 		

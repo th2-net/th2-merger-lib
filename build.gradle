@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'java-library'
 }
 
 group 'com.exactpro.th2'
@@ -18,14 +19,20 @@ repositories {
     mavenCentral()
 }
 
-dependencies { 
+dependencies {
 
-    implementation "com.exactpro.th2:grpc-data-provider:0.1.4"
+    // BOM with external dependencies restrictions
+    api platform('com.exactpro.th2:bom:3.1.0')
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 
     // the library for interaction with infra API
-    implementation 'com.exactpro.th2:common:3.24.2'
+    implementation 'com.exactpro.th2:common:3.32.0'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.6.0'
+    implementation 'io.grpc:grpc-core'
+
+    implementation 'com.exactpro.th2:grpc-data-provider:0.1.4'
     
 }
 
