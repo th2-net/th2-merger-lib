@@ -19,15 +19,10 @@ public class SingleStreamBuffer implements StreamObserver<StreamResponse> {
 	private volatile boolean streamCompleted = false;
 	
 	private volatile boolean completedWithError = false;
-	
-	public SingleStreamBuffer(Integer messageQueueSizeLimit) {
-		
-		if(messageQueueSizeLimit != null) {
-			queue = new LinkedBlockingQueue<>(messageQueueSizeLimit);
-		} else {
-			queue = new LinkedBlockingQueue<>();
-		}
-		
+
+	private int maxSize = 0;
+
+	public SingleStreamBuffer() {
 	}
 	
 	@Override
@@ -35,6 +30,7 @@ public class SingleStreamBuffer implements StreamObserver<StreamResponse> {
 		
 		try {
 			queue.put(value);
+			maxSize++;
 		} catch (InterruptedException e) {
 			logger.error("Interrupted", e);
 			completedWithError = true;
@@ -67,5 +63,13 @@ public class SingleStreamBuffer implements StreamObserver<StreamResponse> {
 	public boolean isCompletedWithError() {
 		return completedWithError;
 	}
-	
+
+	public void reboot() {
+		streamCompleted = false;
+		maxSize = 0;
+	}
+
+	public int getMaxSize() {
+		return maxSize;
+	}
 }

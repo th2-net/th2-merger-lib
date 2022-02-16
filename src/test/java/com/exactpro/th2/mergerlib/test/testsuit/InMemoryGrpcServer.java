@@ -6,6 +6,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.exactpro.th2.common.grpc.MessageID;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Int32Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,21 +70,26 @@ public class InMemoryGrpcServer {
 			
 			logger.info("Search messages request");
 			
-			int numMsgs = 5;
-			
-			for (int i = 1; i <= numMsgs; i++) {
-				
+			int numMsgs = 36;
+			int prevInnerMessageId = request.getResumeFromId().getDirectionValue();
+
+			int limit = request.getResultCountLimit().getValue();
+			int remainder = numMsgs - prevInnerMessageId;
+
+			remainder = (double)remainder / limit > 1 ? limit : remainder;
+
+			for (int i = 1; i <= remainder; i++) {
+				MessageID messageID = MessageID.newBuilder().setDirectionValue(prevInnerMessageId+i).build();
 				executorService.schedule(() -> {
 					MessageMetadata metadata = MessageMetadata.newBuilder()
 							.setTimestamp(generateTimestamp())
 							.build();
-					
 					Message msg = Message.newBuilder()
 							.setMetadata(metadata)
 							.build();
 					
 					MessageData md = MessageData.newBuilder()
-							.setMessage(msg)
+							.setMessage(msg).setMessageId(messageID)
 							.build();
 					
 					StreamResponse resp = StreamResponse.newBuilder()
@@ -100,7 +108,7 @@ public class InMemoryGrpcServer {
 				responseObserver.onCompleted();
 				logger.info("Search messages response completed");
 			},
-				numMsgs + 1, 
+					remainder,
 				TimeUnit.SECONDS);
 			
 		}
