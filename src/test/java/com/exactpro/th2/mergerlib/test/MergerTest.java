@@ -54,8 +54,7 @@ public class MergerTest {
 	                .setStartTimestamp(timestampFromInstant(from))
 	                .setEndTimestamp(timestampFromInstant(to))
 	                .setSearchDirection(TimeRelation.NEXT)
-	                .setStream(StringList.newBuilder().addAllListString(streamId).build())
-	                .setResultCountLimit(Int32Value.of(100));
+	                .setStream(StringList.newBuilder().addAllListString(streamId).build());
 	    	
 	    	requests.add( messageSearchBuilder.build() );
 	    	

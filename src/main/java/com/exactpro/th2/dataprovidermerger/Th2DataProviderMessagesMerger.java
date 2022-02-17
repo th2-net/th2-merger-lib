@@ -2,6 +2,7 @@ package com.exactpro.th2.dataprovidermerger;
 
 import java.util.*;
 
+import com.google.protobuf.Int32Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,8 +22,15 @@ public class Th2DataProviderMessagesMerger {
 
 	private ManagedChannel channel;
 
+	private Integer limit;
+
 	public Th2DataProviderMessagesMerger(ManagedChannel channel) {
 		this.channel = channel;
+	}
+
+	public Th2DataProviderMessagesMerger(ManagedChannel channel, Integer limit) {
+		this.channel = channel;
+		this.limit = limit;
 	}
 
 	public Iterator<StreamResponse> searchMessages(List<MessageSearchRequest> searchOptions,
@@ -31,6 +39,13 @@ public class Th2DataProviderMessagesMerger {
 		MergeIterator mergeIterator = new MergeIterator(new ArrayList<>(), responseComparator);
 
 		for(MessageSearchRequest request : searchOptions) {
+
+			if(limit != null){
+				MessageSearchRequest.Builder messageSearchBuilder = MessageSearchRequest.newBuilder()
+						.mergeFrom(request)
+						.setResultCountLimit(Int32Value.of(limit));
+				request = messageSearchBuilder.build();
+			}
 
 			SingleStreamBuffer buffer = new SingleStreamBuffer();
 
@@ -139,16 +154,12 @@ public class Th2DataProviderMessagesMerger {
 
 								MessageSearchRequest request = buffer.getMessageSearchRequest();
 
-								if(buffer.getMaxSize() < request.getResultCountLimit().getValue()){
+								if(limit == null || buffer.getMaxSize() < request.getResultCountLimit().getValue()){
 									continue;
 								}
 
 								MessageSearchRequest.Builder messageSearchBuilder = MessageSearchRequest.newBuilder()
-										.setStartTimestamp(request.getStartTimestamp())
-										.setEndTimestamp(request.getEndTimestamp())
-										.setSearchDirection(request.getSearchDirection())
-										.setStream(request.getStream())
-										.setResultCountLimit(request.getResultCountLimit());
+										.mergeFrom(request);
 								if(buffer.getPrevStreamResponse() != null){
 									messageSearchBuilder.setResumeFromId(buffer.getPrevStreamResponse().getMessage().getMessageId());
 								}

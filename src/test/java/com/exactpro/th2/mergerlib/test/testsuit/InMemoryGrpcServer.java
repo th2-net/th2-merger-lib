@@ -73,10 +73,12 @@ public class InMemoryGrpcServer {
 			int numMsgs = 36;
 			long prevInnerMessageId = request.getResumeFromId().getSequence();
 
-			int limit = request.getResultCountLimit().getValue();
 			long remainder = numMsgs - prevInnerMessageId;
 
-			remainder = (double)remainder / limit > 1 ? limit : remainder;
+			if(request.getResultCountLimit() != Int32Value.getDefaultInstance()){
+				int limit = request.getResultCountLimit().getValue();
+				remainder = (double)remainder / limit > 1 ? limit : remainder;
+			}
 
 			for (int i = 1; i <= remainder; i++) {
 				MessageID messageID = MessageID.newBuilder().setSequence(prevInnerMessageId+i).build();
