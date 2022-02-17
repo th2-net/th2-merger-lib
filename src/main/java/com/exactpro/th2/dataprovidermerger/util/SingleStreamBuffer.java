@@ -3,6 +3,8 @@ package com.exactpro.th2.dataprovidermerger.util;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import com.exactpro.th2.dataprovider.grpc.DataProviderGrpc;
+import com.exactpro.th2.dataprovider.grpc.MessageSearchRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +17,12 @@ public class SingleStreamBuffer implements StreamObserver<StreamResponse> {
 	private static final Logger logger = LoggerFactory.getLogger(SingleStreamBuffer.class);
 	
 	private BlockingQueue<StreamResponse> queue = new LinkedBlockingQueue<>();
+
+	private MessageSearchRequest request;
+
+	private DataProviderGrpc.DataProviderStub client;
+
+	private StreamResponse prev = null;
 
 	private volatile boolean streamCompleted = false;
 	
@@ -71,5 +79,29 @@ public class SingleStreamBuffer implements StreamObserver<StreamResponse> {
 
 	public int getMaxSize() {
 		return maxSize;
+	}
+
+	public MessageSearchRequest getMessageSearchRequest() {
+		return request;
+	}
+
+	public void setMessageSearchRequest(MessageSearchRequest request) {
+		this.request = request;
+	}
+
+	public DataProviderGrpc.DataProviderStub getDataProviderStub() {
+		return client;
+	}
+
+	public void setDataProviderStub(DataProviderGrpc.DataProviderStub client) {
+		this.client = client;
+	}
+
+	public StreamResponse getPrevStreamResponse() {
+		return prev;
+	}
+
+	public void setPrevStreamResponse(StreamResponse prev) {
+		this.prev = prev;
 	}
 }

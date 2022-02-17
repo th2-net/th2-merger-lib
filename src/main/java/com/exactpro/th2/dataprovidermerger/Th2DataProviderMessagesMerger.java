@@ -28,7 +28,7 @@ public class Th2DataProviderMessagesMerger {
 	public Iterator<StreamResponse> searchMessages(List<MessageSearchRequest> searchOptions,
 												   Comparator<StreamResponse> responseComparator) {
 
-		MergeIterator mergeIterator = new MergeIterator(new HashMap<>(), responseComparator, new HashMap<>());
+		MergeIterator mergeIterator = new MergeIterator(new ArrayList<>(), responseComparator);
 
 		for(MessageSearchRequest request : searchOptions) {
 
@@ -38,9 +38,11 @@ public class Th2DataProviderMessagesMerger {
 
 			client.searchMessages(request, buffer);
 
-			mergeIterator.getClients().put(buffer, client);
+			buffer.setMessageSearchRequest(request);
 
-			mergeIterator.getBuffers().put(buffer, request);
+			buffer.setDataProviderStub(client);
+
+			mergeIterator.getBuffers().add(buffer);
 
 		}
 
@@ -50,18 +52,14 @@ public class Th2DataProviderMessagesMerger {
 	private class MergeIterator implements Iterator<StreamResponse> {
 
 		private StreamResponse next = null;
-		private StreamResponse prev = null;
 
-		private final HashMap<SingleStreamBuffer, MessageSearchRequest> buffers;
-
-		private final HashMap<SingleStreamBuffer, DataProviderStub> clients;
+		private final List<SingleStreamBuffer> buffers;
 
 		private final Comparator<StreamResponse> responseComparator;
 
-		public MergeIterator(HashMap<SingleStreamBuffer, MessageSearchRequest> buffers, Comparator<StreamResponse> responseComparator, HashMap<SingleStreamBuffer, DataProviderStub> clients){
+		public MergeIterator(List<SingleStreamBuffer> buffers, Comparator<StreamResponse> responseComparator){
 			this.buffers = buffers;
 			this.responseComparator = responseComparator;
-			this.clients = clients;
 		}
 
 		@Override
@@ -83,7 +81,6 @@ public class Th2DataProviderMessagesMerger {
 
 			if(next != null) {
 				result = next;
-				prev = next;
 				next = null;
 			} else {
 				result = getNextMessageBlocking();
@@ -99,7 +96,7 @@ public class Th2DataProviderMessagesMerger {
 		private void debugQueues() {
 			StringBuilder sb = new StringBuilder();
 
-			for (SingleStreamBuffer buffer : buffers.keySet()) {
+			for (SingleStreamBuffer buffer : buffers) {
 				sb.append("-")
 						.append(buffer.getQueue().size());
 			}
@@ -119,7 +116,7 @@ public class Th2DataProviderMessagesMerger {
 					StreamResponse nextResponse = null;
 					boolean canProvideNext = true;
 
-					for(SingleStreamBuffer buffer : buffers.keySet()) {
+					for(SingleStreamBuffer buffer : buffers) {
 
 						if(buffer.isCompletedWithError()) {
 							throw new IllegalStateException("One of the message streams was closed with an error");
@@ -140,7 +137,7 @@ public class Th2DataProviderMessagesMerger {
 						} else {
 							if(bufferStreamCompleted) {
 
-								MessageSearchRequest request = buffers.get(buffer);
+								MessageSearchRequest request = buffer.getMessageSearchRequest();
 
 								if(buffer.getMaxSize() < request.getResultCountLimit().getValue()){
 									continue;
@@ -152,17 +149,17 @@ public class Th2DataProviderMessagesMerger {
 										.setSearchDirection(request.getSearchDirection())
 										.setStream(request.getStream())
 										.setResultCountLimit(request.getResultCountLimit());
-								if(prev != null){
-									messageSearchBuilder.setResumeFromId(prev.getMessage().getMessageId());
+								if(buffer.getPrevStreamResponse() != null){
+									messageSearchBuilder.setResumeFromId(buffer.getPrevStreamResponse().getMessage().getMessageId());
 								}
 
 								request = messageSearchBuilder.build();
 
 								buffer.reboot();
 
-								buffers.put(buffer, request);
+								buffer.setMessageSearchRequest(request);
 
-								clients.get(buffer).searchMessages(request, buffer);
+								buffer.getDataProviderStub().searchMessages(request, buffer);
 
 								continue;
 							} else {
@@ -179,6 +176,12 @@ public class Th2DataProviderMessagesMerger {
 						}
 
 						if(canProvideNext) {
+							if(next == null){
+								nextBuffer.setPrevStreamResponse(nextBuffer.getQueue().peek());
+							}
+							else{
+								nextBuffer.setPrevStreamResponse(next);
+							}
 							return nextBuffer.getQueue().poll();
 						} else {
 							Thread.sleep(SLEEP_TIME);
@@ -195,20 +198,12 @@ public class Th2DataProviderMessagesMerger {
 
 		}
 
-		public HashMap<SingleStreamBuffer, MessageSearchRequest>  getBuffers(){
+		public List<SingleStreamBuffer> getBuffers(){
 			return buffers;
-		}
-
-		public HashMap<SingleStreamBuffer, DataProviderStub> getClients(){
-			return clients;
 		}
 
 		public Comparator<StreamResponse> getResponseComparator(){
 			return responseComparator;
-		}
-
-		public StreamResponse getPrev(){
-			return prev;
 		}
 
 	}
