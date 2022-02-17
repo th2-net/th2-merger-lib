@@ -71,15 +71,15 @@ public class InMemoryGrpcServer {
 			logger.info("Search messages request");
 			
 			int numMsgs = 36;
-			int prevInnerMessageId = request.getResumeFromId().getDirectionValue();
+			long prevInnerMessageId = request.getResumeFromId().getSequence();
 
 			int limit = request.getResultCountLimit().getValue();
-			int remainder = numMsgs - prevInnerMessageId;
+			long remainder = numMsgs - prevInnerMessageId;
 
 			remainder = (double)remainder / limit > 1 ? limit : remainder;
 
 			for (int i = 1; i <= remainder; i++) {
-				MessageID messageID = MessageID.newBuilder().setDirectionValue(prevInnerMessageId+i).build();
+				MessageID messageID = MessageID.newBuilder().setSequence(prevInnerMessageId+i).build();
 				executorService.schedule(() -> {
 					MessageMetadata metadata = MessageMetadata.newBuilder()
 							.setTimestamp(generateTimestamp())
