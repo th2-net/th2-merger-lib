@@ -149,8 +149,7 @@ public class Th2DataProviderMessagesMerger {
 								nextBuffer = buffer;
 							}
 
-						} else {
-							if(bufferStreamCompleted) {
+							if(limit != null && buffer.getMaxSize() == limit && buffer.getQueue().size() <= ((limit * 10) / 100)){
 
 								MessageSearchRequest request = buffer.getMessageSearchRequest();
 
@@ -171,7 +170,10 @@ public class Th2DataProviderMessagesMerger {
 								buffer.setMessageSearchRequest(request);
 
 								buffer.getDataProviderStub().searchMessages(request, buffer);
+							}
 
+						} else {
+							if(bufferStreamCompleted) {
 								continue;
 							} else {
 								canProvideNext = false;
@@ -187,12 +189,6 @@ public class Th2DataProviderMessagesMerger {
 						}
 
 						if(canProvideNext) {
-							if(next == null){
-								nextBuffer.setPrevStreamResponse(nextBuffer.getQueue().peek());
-							}
-							else{
-								nextBuffer.setPrevStreamResponse(next);
-							}
 							return nextBuffer.getQueue().poll();
 						} else {
 							Thread.sleep(SLEEP_TIME);

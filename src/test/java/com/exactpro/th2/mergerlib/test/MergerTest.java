@@ -83,7 +83,7 @@ public class MergerTest {
 	        .usePlaintext()
 	        .build();
 		
-		Th2DataProviderMessagesMerger merger = new Th2DataProviderMessagesMerger(channel);
+		Th2DataProviderMessagesMerger merger = new Th2DataProviderMessagesMerger(channel, 100);
 		
 		Iterator<StreamResponse> it = merger.searchMessages(createRequests(3),
 				new TimestampComparator().reversed());

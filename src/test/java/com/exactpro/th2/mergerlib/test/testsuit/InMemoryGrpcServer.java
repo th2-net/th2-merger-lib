@@ -70,7 +70,7 @@ public class InMemoryGrpcServer {
 			
 			logger.info("Search messages request");
 			
-			int numMsgs = 36;
+			int numMsgs = 235;
 			long prevInnerMessageId = request.getResumeFromId().getSequence();
 
 			long remainder = numMsgs - prevInnerMessageId;
@@ -100,7 +100,7 @@ public class InMemoryGrpcServer {
 					
 			        responseObserver.onNext(resp);
 				},
-					1*i, 
+					1,
 					TimeUnit.SECONDS);
 				
 				
@@ -110,7 +110,7 @@ public class InMemoryGrpcServer {
 				responseObserver.onCompleted();
 				logger.info("Search messages response completed");
 			},
-					remainder,
+					1,
 				TimeUnit.SECONDS);
 			
 		}

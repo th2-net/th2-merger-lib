@@ -39,6 +39,7 @@ public class SingleStreamBuffer implements StreamObserver<StreamResponse> {
 		try {
 			queue.put(value);
 			maxSize++;
+			prev = value;
 		} catch (InterruptedException e) {
 			logger.error("Interrupted", e);
 			completedWithError = true;
