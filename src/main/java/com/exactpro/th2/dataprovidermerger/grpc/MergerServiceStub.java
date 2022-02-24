@@ -18,84 +18,89 @@ package com.exactpro.th2.dataprovidermerger.grpc;
 
 import com.exactpro.th2.common.grpc.EventID;
 import com.exactpro.th2.common.grpc.MessageID;
+import com.exactpro.th2.dataprovider.grpc.BulkEventRequest;
+import com.exactpro.th2.dataprovider.grpc.BulkEventResponse;
 import com.exactpro.th2.dataprovider.grpc.DataProviderService;
-import com.exactpro.th2.dataprovider.grpc.EventData;
-import com.exactpro.th2.dataprovider.grpc.EventIds;
+import com.exactpro.th2.dataprovider.grpc.EventFiltersRequest;
+import com.exactpro.th2.dataprovider.grpc.EventMatchRequest;
+import com.exactpro.th2.dataprovider.grpc.EventResponse;
 import com.exactpro.th2.dataprovider.grpc.EventSearchRequest;
-import com.exactpro.th2.dataprovider.grpc.Events;
-import com.exactpro.th2.dataprovider.grpc.FilterInfo;
-import com.exactpro.th2.dataprovider.grpc.FilterName;
-import com.exactpro.th2.dataprovider.grpc.IsMatched;
-import com.exactpro.th2.dataprovider.grpc.ListFilterName;
-import com.exactpro.th2.dataprovider.grpc.MatchRequest;
-import com.exactpro.th2.dataprovider.grpc.MessageData;
+import com.exactpro.th2.dataprovider.grpc.EventSearchResponse;
+import com.exactpro.th2.dataprovider.grpc.FilterInfoRequest;
+import com.exactpro.th2.dataprovider.grpc.FilterInfoResponse;
+import com.exactpro.th2.dataprovider.grpc.FilterNamesResponse;
+import com.exactpro.th2.dataprovider.grpc.MatchResponse;
+import com.exactpro.th2.dataprovider.grpc.MessageFiltersRequest;
+import com.exactpro.th2.dataprovider.grpc.MessageGroupResponse;
+import com.exactpro.th2.dataprovider.grpc.MessageMatchRequest;
 import com.exactpro.th2.dataprovider.grpc.MessageSearchRequest;
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
-import com.exactpro.th2.dataprovider.grpc.StringList;
-import com.google.protobuf.Empty;
+import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
+import com.exactpro.th2.dataprovider.grpc.MessageStreamsRequest;
+import com.exactpro.th2.dataprovider.grpc.MessageStreamsResponse;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.Iterator;
 
 public class MergerServiceStub implements DataProviderService {
 
+
     @Override
-    public EventData getEvent(EventID input) {
+    public EventResponse getEvent(EventID input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public Events getEvents(EventIds input) {
+    public BulkEventResponse getEvents(BulkEventRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public MessageData getMessage(MessageID input) {
+    public MessageGroupResponse getMessage(MessageID input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public StringList getMessageStreams(Empty input) {
+    public MessageStreamsResponse getMessageStreams(MessageStreamsRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public Iterator<StreamResponse> searchMessages(MessageSearchRequest input) {
+    public Iterator<MessageSearchResponse> searchMessages(MessageSearchRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public Iterator<StreamResponse> searchEvents(EventSearchRequest input) {
+    public Iterator<EventSearchResponse> searchEvents(EventSearchRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public ListFilterName getMessagesFilters(Empty input) {
+    public FilterNamesResponse getMessagesFilters(MessageFiltersRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public ListFilterName getEventsFilters(Empty input) {
+    public FilterNamesResponse getEventsFilters(EventFiltersRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public FilterInfo getEventFilterInfo(FilterName input) {
+    public FilterInfoResponse getEventFilterInfo(FilterInfoRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public FilterInfo getMessageFilterInfo(FilterName input) {
+    public FilterInfoResponse getMessageFilterInfo(FilterInfoRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public IsMatched matchEvent(MatchRequest input) {
+    public MatchResponse matchEvent(EventMatchRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 
     @Override
-    public IsMatched matchMessage(MatchRequest input) {
+    public MatchResponse matchMessage(MessageMatchRequest input) {
         throw new NotImplementedException("Method is not supported");
     }
 }

@@ -4,21 +4,24 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.exactpro.th2.common.grpc.Direction;
+import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
+import com.exactpro.th2.dataprovider.grpc.MessageStream;
+import com.exactpro.th2.dataprovider.grpc.MessageStreamsRequest;
+import com.exactpro.th2.dataprovider.grpc.MessageStreamsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.exactpro.th2.dataprovider.grpc.DataProviderGrpc;
 import com.exactpro.th2.dataprovider.grpc.DataProviderGrpc.DataProviderBlockingStub;
 import com.exactpro.th2.dataprovider.grpc.MessageSearchRequest;
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
-import com.exactpro.th2.dataprovider.grpc.StringList;
 import com.exactpro.th2.dataprovider.grpc.TimeRelation;
-import com.google.protobuf.Empty;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Timestamp;
 
@@ -28,6 +31,15 @@ import io.grpc.ManagedChannelBuilder;
 public class LdpConnectivityTest {
 
 	private static final Logger logger = LoggerFactory.getLogger(LdpConnectivityTest.class);
+
+	private static Iterable<MessageStream> getStreams(List<String> streams) {
+		List<MessageStream> out = new ArrayList<>(streams.size() * 2);
+		for (String stream : streams) {
+			out.add(MessageStream.newBuilder().setName(stream).setDirection(Direction.FIRST).build());
+			out.add(MessageStream.newBuilder().setName(stream).setDirection(Direction.SECOND).build());
+		}
+		return out;
+	}
 
 	public static void main(String[] args) throws InterruptedException {
 
@@ -46,21 +58,21 @@ public class LdpConnectivityTest {
 			MessageSearchRequest.Builder messageSearchBuilder = MessageSearchRequest.newBuilder()
 					.setStartTimestamp(timestampFromInstant(from)).setEndTimestamp(timestampFromInstant(to))
 					.setSearchDirection(TimeRelation.NEXT)
-					.setStream(StringList.newBuilder().addAllListString(streamId).build())
+					.addAllStream(getStreams(streamId))
 					.setResultCountLimit(Int32Value.of(100));
 
 			DataProviderBlockingStub client = DataProviderGrpc.newBlockingStub(channel);
 
 			// DataProviderStub client2 = DataProviderGrpc.newStub(channel);
 
-			StringList streams = client.getMessageStreams(Empty.getDefaultInstance());
+			MessageStreamsResponse streams = client.getMessageStreams(MessageStreamsRequest.getDefaultInstance());
 
-			Iterator<StreamResponse> it = client.searchMessages(messageSearchBuilder.build());
+			Iterator<MessageSearchResponse> it = client.searchMessages(messageSearchBuilder.build());
 
 			logger.info("Streams: {}", streams);
 
 			while (it.hasNext()) {
-				StreamResponse r = it.next();
+				MessageSearchResponse r = it.next();
 				logger.info("Response: {}", r);
 			}
 

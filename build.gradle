@@ -17,6 +17,14 @@ ext {
 
 repositories {
     mavenCentral()
+    maven {
+        name 'Sonatype_snapshots'
+        url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+    }
+    maven {
+        name 'Sonatype_releases'
+        url 'https://s01.oss.sonatype.org/content/repositories/releases/'
+    }
 }
 
 dependencies {
@@ -32,7 +40,7 @@ dependencies {
 
     implementation 'io.grpc:grpc-core'
 
-    implementation 'com.exactpro.th2:grpc-data-provider:0.1.4'
+    implementation 'com.exactpro.th2:grpc-data-provider:1.1.0-stream_direction-1857765871-SNAPSHOT'
     
 }
 

@@ -7,6 +7,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.exactpro.th2.dataprovider.grpc.MessageGroupItem;
+import com.exactpro.th2.dataprovider.grpc.MessageGroupResponse;
+import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
+import com.google.protobuf.ByteString;
 import io.grpc.inprocess.InProcessServerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,12 +18,9 @@ import org.slf4j.LoggerFactory;
 import com.exactpro.th2.common.grpc.Message;
 import com.exactpro.th2.common.grpc.MessageMetadata;
 import com.exactpro.th2.dataprovider.grpc.DataProviderGrpc.DataProviderImplBase;
-import com.exactpro.th2.dataprovider.grpc.MessageData;
 import com.exactpro.th2.dataprovider.grpc.MessageSearchRequest;
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
 import com.google.protobuf.Timestamp;
 
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 public class InMemoryGrpcServer {
@@ -79,7 +80,7 @@ public class InMemoryGrpcServer {
 
 		@Override
 		public void searchMessages(MessageSearchRequest request,
-		        StreamObserver<StreamResponse> responseObserver) {
+		        StreamObserver<MessageSearchResponse> responseObserver) {
 			
 			logger.info("Search messages request");
 			
@@ -92,21 +93,25 @@ public class InMemoryGrpcServer {
 							.setTimestamp(Timestamp.newBuilder().setSeconds(time.getEpochSecond()).setNanos(time.getNano()))
 							.build();
 
-					Message msg = Message.newBuilder()
-							.setMetadata(metadata)
-							.build();
+				Message msg = Message.newBuilder()
+						.setMetadata(metadata)
 
-					MessageData md = MessageData.newBuilder()
-							.setMessage(msg)
-							.build();
+						.build();
 
-					StreamResponse resp = StreamResponse.newBuilder()
-						.setMessage(md)
-			          .build();
+				MessageGroupItem msgItem = MessageGroupItem.newBuilder().setMessage(msg).build();
 
-			        responseObserver.onNext(resp);
+				MessageGroupResponse resp = MessageGroupResponse.newBuilder()
+						.addMessageItem(msgItem)
+						.setTimestamp(metadata.getTimestamp())
+						.setBodyRaw(ByteString.copyFromUtf8("1234567890123456789012345678901234567890123456789012345678901234567890"))
+						.build();
 
-					logger.debug("Send message with time: " + getTime());
+
+				MessageSearchResponse resp1 = MessageSearchResponse.newBuilder().setMessage(resp).build();
+
+				responseObserver.onNext(resp1);
+
+				logger.debug("Send message with time: " + getTime());
 
 		    }
 

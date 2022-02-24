@@ -1,6 +1,5 @@
 package com.exactpro.th2.mergerlib.test;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -12,6 +11,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.exactpro.th2.common.grpc.Direction;
+import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
+import com.exactpro.th2.dataprovider.grpc.MessageStream;
 import io.grpc.inprocess.InProcessServerBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -19,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.exactpro.th2.dataprovider.grpc.MessageSearchRequest;
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
-import com.exactpro.th2.dataprovider.grpc.StringList;
 import com.exactpro.th2.dataprovider.grpc.TimeRelation;
 import com.exactpro.th2.dataprovidermerger.Th2DataProviderMessagesMerger;
 import com.exactpro.th2.dataprovidermerger.util.MergerUtil;
@@ -29,8 +29,6 @@ import com.exactpro.th2.mergerlib.test.testsuit.InMemoryGrpcServer;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Timestamp;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,11 +55,10 @@ public class MergerTest {
 	                .setStartTimestamp(timestampFromInstant(from))
 	                .setEndTimestamp(timestampFromInstant(to))
 	                .setSearchDirection(TimeRelation.NEXT)
-	                .setStream(StringList.newBuilder().addAllListString(streamId).build())
+	                .addStream(MessageStream.newBuilder().setName(streamId.get(0)).setDirection(Direction.FIRST).build())
 	                .setResultCountLimit(Int32Value.of(100));
 	    	
 	    	requests.add( messageSearchBuilder.build() );
-	    	
 		}
     	
     	return requests;
@@ -86,7 +83,7 @@ public class MergerTest {
 
 		Th2DataProviderMessagesMerger merger = new Th2DataProviderMessagesMerger(new TestCommonFactory(srvName, executorService));
 		
-		Iterator<StreamResponse> it = merger.searchMessages(createRequests(3),
+		Iterator<MessageSearchResponse> it = merger.searchMessages(createRequests(3),
 				new TimestampComparator().reversed());
 		
 		Timestamp defaultTs = Timestamp.newBuilder().setSeconds(0).build();
@@ -94,7 +91,7 @@ public class MergerTest {
 
 		int count = 0;
 		while (it.hasNext()) {
-            StreamResponse r = it.next();
+            MessageSearchResponse r = it.next();
             
             Instant currentTimestamp = MergerUtil.extractTimestampFromMessage(r, defaultTs);
             if(lastTimestamp != null) {

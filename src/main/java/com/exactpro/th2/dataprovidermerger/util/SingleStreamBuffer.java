@@ -16,7 +16,7 @@
 
 package com.exactpro.th2.dataprovidermerger.util;
 
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
+import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,12 +29,12 @@ public class SingleStreamBuffer {
     private volatile boolean streamCompleted = false;
     private volatile boolean completedWithError = false;
 
-    private final Iterator<StreamResponse> sourceIterator;
-    private StreamResponse currentMessage;
+    private final Iterator<MessageSearchResponse> sourceIterator;
+    private MessageSearchResponse currentMessage;
 
     private int loadedMessages = 0;
 
-    public SingleStreamBuffer(Iterator<StreamResponse> sourceIterator) {
+    public SingleStreamBuffer(Iterator<MessageSearchResponse> sourceIterator) {
         this.sourceIterator = sourceIterator;
     }
 
@@ -54,7 +54,7 @@ public class SingleStreamBuffer {
         }
     }
 
-    public StreamResponse getCurrentMessage() {
+    public MessageSearchResponse getCurrentMessage() {
         return currentMessage;
     }
 

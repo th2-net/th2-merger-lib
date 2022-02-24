@@ -36,7 +36,6 @@ import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.Collections;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 public class TestCommonFactory extends CommonFactory {
 

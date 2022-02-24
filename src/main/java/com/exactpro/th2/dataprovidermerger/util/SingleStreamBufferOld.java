@@ -19,19 +19,18 @@ package com.exactpro.th2.dataprovidermerger.util;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
+import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
-
-import io.grpc.stub.StreamObserver;
 
 @Deprecated
-public class SingleStreamBufferOld implements StreamObserver<StreamResponse> {
+public class SingleStreamBufferOld implements StreamObserver<MessageSearchResponse> {
 	
 	private static final Logger logger = LoggerFactory.getLogger(SingleStreamBuffer.class);
 	
-	private BlockingQueue<StreamResponse> queue = new LinkedBlockingQueue<>();
+	private BlockingQueue<MessageSearchResponse> queue = new LinkedBlockingQueue<>();
 
 	private volatile boolean streamCompleted = false;
 	
@@ -48,7 +47,7 @@ public class SingleStreamBufferOld implements StreamObserver<StreamResponse> {
 	}
 	
 	@Override
-	public void onNext(StreamResponse value) {
+	public void onNext(MessageSearchResponse value) {
 		
 		try {
 			queue.put(value);
@@ -73,7 +72,7 @@ public class SingleStreamBufferOld implements StreamObserver<StreamResponse> {
 		streamCompleted = true;
 	}
 	
-	public BlockingQueue<StreamResponse> getQueue() {
+	public BlockingQueue<MessageSearchResponse> getQueue() {
 		return queue;
 	}
 

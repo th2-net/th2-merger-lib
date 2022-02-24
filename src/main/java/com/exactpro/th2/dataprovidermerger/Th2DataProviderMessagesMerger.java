@@ -24,12 +24,12 @@ import java.util.Objects;
 
 import com.exactpro.th2.common.schema.factory.CommonFactory;
 import com.exactpro.th2.dataprovider.grpc.DataProviderService;
+import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.exactpro.th2.dataprovidermerger.util.SingleStreamBuffer;
 import com.exactpro.th2.dataprovider.grpc.MessageSearchRequest;
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
 
 
 public class Th2DataProviderMessagesMerger {
@@ -38,7 +38,7 @@ public class Th2DataProviderMessagesMerger {
 	
 	private CommonFactory commonFactory;
 	private List<SingleStreamBuffer> buffers;
-	private Comparator<StreamResponse> responseComparator;
+	private Comparator<MessageSearchResponse> responseComparator;
 	
 	public Th2DataProviderMessagesMerger(CommonFactory channel) {
 		this.commonFactory = channel;
@@ -61,8 +61,8 @@ public class Th2DataProviderMessagesMerger {
 		logger.debug("Queue sizes: {}", sb.toString());
 	}
 	
-	public Iterator<StreamResponse> searchMessages(List<MessageSearchRequest> searchOptions,
-			Comparator<StreamResponse> responseComparator) throws Exception {
+	public Iterator<MessageSearchResponse> searchMessages(List<MessageSearchRequest> searchOptions,
+			Comparator<MessageSearchResponse> responseComparator) throws Exception {
 		
 		this.buffers = new ArrayList<>();
 		this.responseComparator = responseComparator;
@@ -79,12 +79,12 @@ public class Th2DataProviderMessagesMerger {
 		return new MergeIterator();
 	}
 	
-	private StreamResponse getNextMessageBlocking() {
+	private MessageSearchResponse getNextMessageBlocking() {
 		
 		try {
 
 			SingleStreamBuffer nextBuffer = null;
-			StreamResponse nextResponse = null;
+			MessageSearchResponse nextResponse = null;
 
 			for(SingleStreamBuffer buffer : buffers) {
 
@@ -96,7 +96,7 @@ public class Th2DataProviderMessagesMerger {
 					continue;
 				}
 
-				StreamResponse bufferMessage = buffer.getCurrentMessage();
+				MessageSearchResponse bufferMessage = buffer.getCurrentMessage();
 
 				Objects.requireNonNull(buffer, "Should not be null. Can be null if stream is finished");
 				if(nextResponse == null
@@ -124,9 +124,9 @@ public class Th2DataProviderMessagesMerger {
 		
 	}
 	
-	private class MergeIterator implements Iterator<StreamResponse> {
+	private class MergeIterator implements Iterator<MessageSearchResponse> {
 		
-		private StreamResponse next = null;
+		private MessageSearchResponse next = null;
 		
 		@Override
 		public boolean hasNext() {
@@ -141,9 +141,9 @@ public class Th2DataProviderMessagesMerger {
 		}
 
 		@Override
-		public StreamResponse next() {
-			
-			StreamResponse result = null;
+		public MessageSearchResponse next() {
+
+			MessageSearchResponse result = null;
 			
 			if(next != null) {
 				result = next;

@@ -16,17 +16,16 @@
 
 package com.exactpro.th2.dataprovidermerger.grpc;
 
-import com.exactpro.th2.common.grpc.ConnectionID;
-import com.exactpro.th2.common.grpc.Direction;
-import com.exactpro.th2.common.grpc.MessageID;
 import com.exactpro.th2.common.schema.factory.CommonFactory;
 import com.exactpro.th2.dataprovider.grpc.DataProviderService;
 import com.exactpro.th2.dataprovider.grpc.MessageSearchRequest;
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
-import com.exactpro.th2.dataprovider.grpc.StringList;
+import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
+import com.exactpro.th2.dataprovider.grpc.MessageStream;
+import com.exactpro.th2.dataprovider.grpc.MessageStreamPointer;
+import com.exactpro.th2.dataprovider.grpc.MessageStreamsRequest;
+import com.exactpro.th2.dataprovider.grpc.MessageStreamsResponse;
 import com.exactpro.th2.dataprovidermerger.Th2DataProviderMessagesMerger;
 import com.exactpro.th2.dataprovidermerger.util.TimestampComparator;
-import com.google.protobuf.Empty;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -47,13 +46,14 @@ public class MergerServiceImpl extends MergerServiceStub implements DataProvider
         this.merger = new Th2DataProviderMessagesMerger(factory);
     }
 
+
     @Override
-    public StringList getMessageStreams(Empty input) {
+    public MessageStreamsResponse getMessageStreams(MessageStreamsRequest input) {
         return sourceService.getMessageStreams(input);
     }
 
     @Override
-    public Iterator<StreamResponse> searchMessages(MessageSearchRequest input) {
+    public Iterator<MessageSearchResponse> searchMessages(MessageSearchRequest input) {
         try {
             return merger.searchMessages(buildRequestsFromSource(input), new TimestampComparator().reversed());
         } catch (Exception e) {
@@ -75,31 +75,17 @@ public class MergerServiceImpl extends MergerServiceStub implements DataProvider
         if (source.hasResultCountLimit()) {
             builder.setResultCountLimit(source.getResultCountLimit());
         }
-        if (source.getMessageIdCount() > 0) {
-            for (MessageID messageID : source.getMessageIdList()) {
-                outList.add(setMsgIdAndBuild(builder, messageID));
+        if (source.getStreamPointerCount() > 0) {
+            for (MessageStreamPointer messageID : source.getStreamPointerList()) {
+                outList.add(builder.addStreamPointer(messageID).build());
+                builder.clearStream();
             }
-        } else if (source.hasStream()) {
-            for (String stream : source.getStream().getListStringList()) {
-                outList.add(setMsgIdAndBuild(builder, getMessageId(stream, Direction.SECOND, 0)));
-                outList.add(setMsgIdAndBuild(builder, getMessageId(stream, Direction.FIRST, 0)));
+        } else if (source.getStreamCount() > 0) {
+            for (MessageStream stream : source.getStreamList()) {
+                outList.add(builder.addStream(stream).build());
+                builder.clearStream();
             }
         }
         return outList;
-    }
-
-    private MessageID getMessageId(String stream, Direction direction, long sequence) {
-        MessageID.Builder msgIdBuilder = MessageID.newBuilder();
-        msgIdBuilder.setConnectionId(ConnectionID.newBuilder().setSessionAlias(stream).build());
-        msgIdBuilder.setSequence(sequence);
-        msgIdBuilder.setDirection(direction);
-        return msgIdBuilder.build();
-    }
-
-    private MessageSearchRequest setMsgIdAndBuild(MessageSearchRequest.Builder builder, MessageID messageID) {
-        builder.addMessageId(messageID);
-        MessageSearchRequest build = builder.build();
-        builder.clearMessageId();
-        return build;
     }
 }
