@@ -153,10 +153,6 @@ public class Th2DataProviderMessagesMerger {
 
 								MessageSearchRequest request = buffer.getMessageSearchRequest();
 
-								if(limit == null || buffer.getMaxSize() < request.getResultCountLimit().getValue()){
-									continue;
-								}
-
 								MessageSearchRequest.Builder messageSearchBuilder = MessageSearchRequest.newBuilder()
 										.mergeFrom(request);
 								if(buffer.getPrevStreamResponse() != null){

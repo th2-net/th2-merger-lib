@@ -5,29 +5,28 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
+import com.exactpro.th2.common.grpc.Message;
+import com.exactpro.th2.common.grpc.MessageID;
+import com.exactpro.th2.common.grpc.MessageMetadata;
+import com.exactpro.th2.dataprovider.grpc.*;
+import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.exactpro.th2.dataprovider.grpc.MessageSearchRequest;
-import com.exactpro.th2.dataprovider.grpc.StreamResponse;
-import com.exactpro.th2.dataprovider.grpc.StringList;
-import com.exactpro.th2.dataprovider.grpc.TimeRelation;
 import com.exactpro.th2.dataprovidermerger.Th2DataProviderMessagesMerger;
 import com.exactpro.th2.dataprovidermerger.util.MergerUtil;
 import com.exactpro.th2.dataprovidermerger.util.TimestampComparator;
 import com.exactpro.th2.mergerlib.test.testsuit.InMemoryGrpcServer;
-import com.google.protobuf.Int32Value;
 import com.google.protobuf.Timestamp;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MergerTest {
@@ -68,13 +67,63 @@ public class MergerTest {
 		return Timestamp.newBuilder().setSeconds(instant.getEpochSecond())
 			    .setNanos(instant.getNano()).build();
 	}
-	
+
+	@FunctionalInterface
+	public interface TestBadMessage {
+
+		Message createBadMessage(StreamObserver<StreamResponse> responseObserver, MessageID messageID, MessageSearchRequest request);
+
+	}
+
+	TestBadMessage noMetadataMessages = (StreamObserver<StreamResponse> responseObserver, MessageID messageID, MessageSearchRequest request) -> {
+		if(messageID.getSequence() == 5)
+			return Message.newBuilder().build();
+		MessageMetadata metadata = MessageMetadata.newBuilder()
+				.setTimestamp(timestampFromInstant(Instant.now()))
+				.build();
+		return Message.newBuilder()
+				.setMetadata(metadata)
+				.build();
+	};
+
+	AtomicReference<Timestamp> keepTime = new AtomicReference<>();
+	TestBadMessage identicalMessages = (StreamObserver<StreamResponse> responseObserver, MessageID messageID, MessageSearchRequest request) -> {
+		MessageMetadata.Builder metadata = MessageMetadata.newBuilder();
+		if(messageID.getSequence() == 5 && request.getStream().getListString(0).equals("LoadTestMessages-1")){
+			Timestamp t = timestampFromInstant(Instant.now());
+			metadata.setTimestamp(t);
+			keepTime.set(t);
+		} else if(messageID.getSequence() == 6 && request.getStream().getListString(0).equals("LoadTestMessages-1")){
+			metadata.setTimestamp(keepTime.get());
+		} else {
+			metadata.setTimestamp(timestampFromInstant(Instant.now()));
+		}
+		return Message.newBuilder()
+				.setMetadata(metadata.build())
+				.build();
+	};
+
+	TestBadMessage flowError = (StreamObserver<StreamResponse> responseObserver, MessageID messageID, MessageSearchRequest request) -> {
+		if(request.getStream().getListString(0).equals("LoadTestMessages-1")){
+			responseObserver.onError(new Throwable("This is flow error"));
+		}
+		return null;
+	};
+	TestBadMessage good = (StreamObserver<StreamResponse> responseObserver, MessageID messageID, MessageSearchRequest request) -> {
+		MessageMetadata metadata = MessageMetadata.newBuilder()
+				.setTimestamp(timestampFromInstant(Instant.now()))
+				.build();
+		return Message.newBuilder()
+				.setMetadata(metadata)
+				.build();
+	};
+
 	@Test
 	public void testFakeServer3Streams() throws IOException, InterruptedException {
 		
 		logger.info("Test 3 streams");
-		
-		InMemoryGrpcServer srv = new InMemoryGrpcServer(port);
+
+		InMemoryGrpcServer srv = new InMemoryGrpcServer(port, good); // use noMetadataMessages, identicalMessages, flowError or good
 		srv.start();
 		
 		String target = "localhost:" + port;
@@ -82,29 +131,35 @@ public class MergerTest {
 		ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
 	        .usePlaintext()
 	        .build();
-		
-		Th2DataProviderMessagesMerger merger = new Th2DataProviderMessagesMerger(channel, 100);
-		
-		Iterator<StreamResponse> it = merger.searchMessages(createRequests(3),
+
+		Th2DataProviderMessagesMerger merger = new Th2DataProviderMessagesMerger(channel, 10);
+
+		int countOfRequest = 3;
+		Iterator<StreamResponse> it = merger.searchMessages(createRequests(countOfRequest),
 				new TimestampComparator().reversed());
 		
 		Timestamp defaultTs = Timestamp.newBuilder().setSeconds(0).build();
 		Instant lastTimestamp = MergerUtil.instantFromTimestamp(defaultTs);
-		
+
+		int countOfMessagesInitial = srv.getNumMsgs();
+		int countOfMessagesTotal = 0;
+
 		while (it.hasNext()) {
-            StreamResponse r = it.next();
-            
-            Instant currentTimestamp = MergerUtil.extractTimestampFromMessage(r, defaultTs);
-            if(lastTimestamp != null) {
-            	// assert that we receive messages in correct order
-            	assertTrue(lastTimestamp.compareTo(currentTimestamp) < 0);
-            }
-            lastTimestamp = currentTimestamp;
-            
-            logger.info("Response: {}", r);
-   	 }
-   	
-   	 logger.info("Stream read finished");
+			StreamResponse r = it.next();
+
+			Instant currentTimestamp = MergerUtil.extractTimestampFromMessage(r, defaultTs);
+
+			if (lastTimestamp != null) {
+				// assert that we receive messages in correct order
+				assertTrue(lastTimestamp.compareTo(currentTimestamp) <= 0);
+			}
+			lastTimestamp = currentTimestamp;
+
+			logger.info("Response: {}", r);
+			countOfMessagesTotal++;
+		}
+		logger.info("Stream read finished " + countOfMessagesTotal);
+		assertEquals((countOfMessagesInitial * countOfRequest), countOfMessagesTotal);
 		
 	}
 	

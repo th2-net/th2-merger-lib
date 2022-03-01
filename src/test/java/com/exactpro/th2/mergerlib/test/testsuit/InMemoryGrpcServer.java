@@ -7,6 +7,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.exactpro.th2.common.grpc.MessageID;
+import com.exactpro.th2.mergerlib.test.MergerTest;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Int32Value;
 import org.slf4j.Logger;
@@ -29,17 +30,25 @@ public class InMemoryGrpcServer {
 	
 	private int port;
 	private io.grpc.Server server;
+	private int numMsgs = 36;
+	private int countOfLists = 0;
+	private MergerTest.TestBadMessage badMessage;
 	
 	private ScheduledExecutorService executorService =
 			Executors.newSingleThreadScheduledExecutor();
-	
+
 	public InMemoryGrpcServer(int port) {
 		this.port = port;
+	}
+
+	public InMemoryGrpcServer(int port, MergerTest.TestBadMessage badMessage) {
+		this.port = port;
+		this.badMessage = badMessage;
 	}
 	
 	public void start() throws IOException, InterruptedException {
         server = ServerBuilder.forPort(port)
-          .addService(new DataProvider())
+          .addService(new DataProvider(numMsgs))
           .build();
         
         server.start();
@@ -63,14 +72,19 @@ public class InMemoryGrpcServer {
 	}
 	
 	private class DataProvider extends DataProviderImplBase {
-		
+
+		private final int numMsgs;
+
+		public DataProvider(int numMsgs){
+			this.numMsgs = numMsgs;
+		}
 		@Override
 		public void searchMessages(MessageSearchRequest request,
 		        StreamObserver<StreamResponse> responseObserver) {
 			
 			logger.info("Search messages request");
 			
-			int numMsgs = 235;
+			countOfLists++;
 			long prevInnerMessageId = request.getResumeFromId().getSequence();
 
 			long remainder = numMsgs - prevInnerMessageId;
@@ -83,13 +97,7 @@ public class InMemoryGrpcServer {
 			for (int i = 1; i <= remainder; i++) {
 				MessageID messageID = MessageID.newBuilder().setSequence(prevInnerMessageId+i).build();
 				executorService.schedule(() -> {
-					MessageMetadata metadata = MessageMetadata.newBuilder()
-							.setTimestamp(generateTimestamp())
-							.build();
-					Message msg = Message.newBuilder()
-							.setMetadata(metadata)
-							.build();
-					
+					Message msg = badMessage.createBadMessage(responseObserver, messageID, request);
 					MessageData md = MessageData.newBuilder()
 							.setMessage(msg).setMessageId(messageID)
 							.build();
@@ -101,9 +109,8 @@ public class InMemoryGrpcServer {
 			        responseObserver.onNext(resp);
 				},
 					1,
-					TimeUnit.SECONDS);
-				
-				
+					TimeUnit.MILLISECONDS);
+
 		    }
 			
 			executorService.schedule(() -> {
@@ -111,7 +118,7 @@ public class InMemoryGrpcServer {
 				logger.info("Search messages response completed");
 			},
 					1,
-				TimeUnit.SECONDS);
+				TimeUnit.MILLISECONDS);
 			
 		}
 		
@@ -124,6 +131,14 @@ public class InMemoryGrpcServer {
 				    .setNanos(instant.getNano()).build();
 		}
 		
+	}
+
+	public int getNumMsgs(){
+		return numMsgs;
+	}
+
+	public int getCountOfLists(){
+		return countOfLists;
 	}
 	
 }
