@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import com.exactpro.th2.dataprovider.grpc.MessageGroupItem;
 import com.exactpro.th2.dataprovider.grpc.MessageGroupResponse;
 import com.exactpro.th2.dataprovider.grpc.MessageSearchResponse;
+import com.exactpro.th2.mergerlib.test.MergerTest;
 import com.google.protobuf.ByteString;
 import io.grpc.inprocess.InProcessServerBuilder;
 import org.slf4j.Logger;
@@ -32,12 +33,21 @@ public class InMemoryGrpcServer {
 	private final String name;
 	private final ExecutorService executorService;
 
+	private int numMsgs = 36;
+	private int countOfLists = 0;
+	private MergerTest.TestBadMessage badMessage;
+
 	private ScheduledExecutorService scheduler =
 			Executors.newSingleThreadScheduledExecutor();
 	
 	public InMemoryGrpcServer(String name, ExecutorService executorService) {
 		this.name = name;
 		this.executorService = executorService;
+	}
+	public InMemoryGrpcServer(String name, ExecutorService executorService, MergerTest.TestBadMessage badMessage) {
+		this.name = name;
+		this.executorService = executorService;
+		this.badMessage = badMessage;
 	}
 	
 	public void start() throws IOException, InterruptedException {
@@ -84,19 +94,13 @@ public class InMemoryGrpcServer {
 			
 			logger.info("Search messages request");
 			
-			int numMsgs = 5;
-			
 			for (int i = 1; i <= numMsgs; i++) {
 
 				Instant time = getTime();
+				Message msg = badMessage.createBadMessage(responseObserver, request);
 				MessageMetadata metadata = MessageMetadata.newBuilder()
 							.setTimestamp(Timestamp.newBuilder().setSeconds(time.getEpochSecond()).setNanos(time.getNano()))
 							.build();
-
-				Message msg = Message.newBuilder()
-						.setMetadata(metadata)
-
-						.build();
 
 				MessageGroupItem msgItem = MessageGroupItem.newBuilder().setMessage(msg).build();
 
@@ -129,6 +133,12 @@ public class InMemoryGrpcServer {
 				    .setNanos(instant.getNano()).build();
 		}
 		
+	}
+	public int getCountOfLists(){
+		return countOfLists;
+	}
+	public int getNumMsgs(){
+		return numMsgs;
 	}
 	
 }
